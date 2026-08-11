@@ -4,7 +4,7 @@
 # =========================
 
 import asyncio
-from pathlib import Path
+import os
 
 import pygame
 
@@ -204,7 +204,9 @@ CHINESE_FONT_PATHS = [
 
 
 def load_font(size):
-    project_font = Path(__file__).resolve().parents[1] / "assets" / "fonts" / "NotoSansCJKtc-Regular.otf"
+    src_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(src_dir)
+    project_font = os.path.join(project_root, "assets", "fonts", "NotoSansCJKtc-Regular.otf")
     font_paths = [project_font, *CHINESE_FONT_PATHS]
     for path in font_paths:
         try:
