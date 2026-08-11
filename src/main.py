@@ -16,6 +16,7 @@ from ui_text import card_list, card_name, card_type_label, race_name, reaction_f
 
 SCREEN_SIZE = (1200, 800)
 MIN_PAGE_FONT_SIZE = 22
+LONG_PRESS_MS = 650
 BG = (246, 250, 255)
 PANEL = (255, 255, 252)
 PANEL_TINT = (242, 248, 255)
@@ -490,6 +491,39 @@ def draw_button(screen, rect, label, font, active=False, accent=BLUE, enabled=Tr
     )
 
 
+def build_action_button_rects(hud_rect):
+    gap = 10
+    top = hud_rect.y + 50
+    height = max(50, hud_rect.height - 62)
+    button_w = (hud_rect.width - 32 - gap * 2) / 3
+    return {
+        "play": pygame.Rect(hud_rect.x + 16, top, button_w, height),
+        "discard": pygame.Rect(hud_rect.x + 16 + button_w + gap, top, button_w, height),
+        "draw": pygame.Rect(hud_rect.x + 16 + (button_w + gap) * 2, top, button_w, height),
+    }
+
+
+def draw_action_panel(screen, rect, font, game):
+    draw_shadowed_panel(screen, rect)
+    header_rect = pygame.Rect(rect.x, rect.y, rect.width, 42)
+    pygame.draw.rect(screen, PANEL_TINT, header_rect, border_top_left_radius=8, border_top_right_radius=8)
+    pygame.draw.line(screen, LINE, (rect.x, rect.y + 42), (rect.right, rect.y + 42), 1)
+    draw_text_in_rect(
+        screen,
+        "操作",
+        pygame.Rect(rect.x + 16, rect.y + 7, rect.width - 32, 34),
+        font,
+        BLUE,
+        max_lines=1,
+    )
+    buttons = build_action_button_rects(rect)
+    can_act = game.waiting_for_player and not game.game_over and not game.synthesis_mode
+    draw_button(screen, buttons["play"], "出牌", font, accent=GREEN, enabled=can_act)
+    draw_button(screen, buttons["discard"], "丟棄", font, accent=WARN, enabled=can_act)
+    draw_button(screen, buttons["draw"], "抽牌", font, accent=BLUE, enabled=can_act)
+    return buttons
+
+
 def build_settings_panel_rect(width, height):
     return pygame.Rect(width - 330, 66, 306, min(420, height - 90))
 
@@ -670,15 +704,15 @@ def draw_help_modal(screen, rect, font, game, scroll=0):
         "",
         "## 四、遊戲區域",
         "ATP 區：顯示玩家目前 ATP。ATP 可用於支付卡牌成本、發動攻擊或防禦、執行部分反應與判定勝利。",
-        "手牌區：顯示玩家目前持有的卡牌。手牌上限為 8 張；手牌滿時，選 1 張按 Shift 丟棄，再點擊牌堆補抽。",
-        "卡牌說明：選中手牌後按 X，可查看該卡牌的詳細功能與相關反應。點擊說明彈窗外空白處可關閉。",
+        "手牌區：顯示玩家目前持有的卡牌。手牌上限為 8 張；手牌滿時，選 1 張點丟棄，再點擊牌堆補抽。",
+        "卡牌說明：長按手牌可查看該卡牌的詳細功能與相關反應。點擊說明彈窗外空白處可關閉。",
         "資源合成：普通模式中，每位玩家每回合可將 2 張資源牌合成為 1 張基礎資源。合成不消耗 ATP，材料會進入棄牌堆，新資源直接加入手牌。",
         "資源合成屬於遊戲化的細胞調節機制，並非真實生化反應。",
         "胞器與結構區：已建立的胞器與結構會永久留在場上。除非受到病毒封鎖或特殊效果影響，胞器與結構不會因執行反應而消耗。",
-        "實驗室 Laboratory：左鍵點擊手牌可加入或移出實驗室。玩家可在確認反應前自由調整實驗室中的卡牌。",
-        "反應預覽區：當實驗室中的卡牌符合反應時，系統會顯示反應名稱、使用材料、產物與可獲得 ATP。按 Enter 才會消耗材料並結算效果。",
+        "實驗室 Laboratory：點擊手牌可加入或移出實驗室。玩家可在確認反應前自由調整實驗室中的卡牌。",
+        "反應預覽區：當實驗室中的卡牌符合反應時，系統會顯示反應名稱、使用材料、產物與可獲得 ATP。點出牌才會消耗材料並結算效果。",
         "資源牌：不可單獨產生 ATP；必須形成有效反應，才會獲得該反應額定 ATP。",
-        "結構牌：可單獨建立，打出後回合結束。重複結構沒有額外效果，可選取後按 Shift 丟棄。",
+        "結構牌：可單獨建立，打出後回合結束。重複結構沒有額外效果，可選取後點丟棄。",
         "環境區：目前同一時間只能存在一種普通環境。缺氧、日照、夜晚會影響可用反應與 ATP 修正，新環境會取代舊環境。",
     ]
     content_rect = pygame.Rect(rect.x + 32, rect.y + 72, rect.width - 64, rect.height - 94)
@@ -866,7 +900,7 @@ def reaction_preview_lines(game):
     if game.waiting_to_discard_for_offer:
         return [
             "手牌已滿",
-            "選 1 張按 Shift 丟棄",
+            "選 1 張點丟棄",
             "接著會拿走棄牌",
         ]
 
@@ -889,7 +923,7 @@ def reaction_preview_lines(game):
         return [
             f"可形成：{reaction_name(game.preview)}",
             reaction_formula(game.preview),
-            f"按 Enter 執行：+{preview_atp} ATP",
+            f"點出牌執行：+{preview_atp} ATP",
         ]
 
     if game.reaction_table:
@@ -898,7 +932,7 @@ def reaction_preview_lines(game):
             if selected_card.type == "structure" and game.has_structure(game.current_player, selected_card.en_name):
                 return [
                     f"重複結構：{selected_card.zh_name}",
-                    "按 Shift 丟棄此牌",
+                    "點丟棄移除此牌",
                     "丟棄後會換下一位",
                 ]
             if selected_card.type == "structure":
@@ -911,13 +945,13 @@ def reaction_preview_lines(game):
                     ]
             return [
                 f"可單獨打出：{selected_card.zh_name}",
-                "按 Enter 出牌",
+                "點出牌",
                 "出牌後會換下一位",
             ]
         if game.current_player_hand_full() and selected_card:
             return [
                 "手牌已滿",
-                "按 Shift 丟棄選取卡牌",
+                "點丟棄移除選取卡牌",
                 "再點擊牌堆補抽 1 張",
             ]
         return [
@@ -929,7 +963,7 @@ def reaction_preview_lines(game):
     return [
         "從手牌選擇卡牌",
         "可形成的反應會顯示在這裡",
-        "有效反應可按 Enter 執行",
+        "有效反應可點出牌執行",
     ]
 
 
@@ -1069,7 +1103,7 @@ def deck_panel_lines(game):
         return [
             f"牌堆：{len(game.deck)} 張",
             "手牌已滿",
-            "先選 1 張按 Shift 丟棄",
+            "先選 1 張點丟棄",
         ]
 
     if game.difficulty == "簡單" and game.can_current_player_form_reaction():
@@ -1112,6 +1146,9 @@ async def main():
     hand_detail_card = None
     hand_detail_scroll = 0
     help_scroll = 0
+    pending_card_press = None
+    pending_synthesis_card_press = None
+    touch_scroll = None
     running = True
 
     while running:
@@ -1129,7 +1166,7 @@ async def main():
         opponent_rect = pygame.Rect(left_x, height * 0.08, left_w, opponent_h)
         player_rect = pygame.Rect(left_x, opponent_rect.bottom + 12, left_w, player_h)
         hand_y = height * 0.71
-        hud_rect = pygame.Rect(center_x, height * 0.565, center_w, height * 0.13)
+        hud_rect = pygame.Rect(center_x, height * 0.565, center_w, height * 0.14)
         hand_rect = pygame.Rect(left_x, hand_y, center_x + center_w - left_x, height - hand_y - 8)
         sprites = build_sprites(game, width, height, hand_rect)
         deck_rect = build_deck_rect(width, height)
@@ -1141,10 +1178,48 @@ async def main():
         settings_rect = build_settings_panel_rect(width, height)
         center_modal_rect = modal_rect(width, height)
         active_modal_rect = catalog_modal_rect(width, height) if active_modal == "catalog" else center_modal_rect
+        action_button_rects = build_action_button_rects(hud_rect)
+
+        now = pygame.time.get_ticks()
+        if pending_card_press and now - pending_card_press["start"] >= LONG_PRESS_MS:
+            index = pending_card_press["index"]
+            if 0 <= index < len(game.current_player.hand):
+                hand_detail_card = game.current_player.hand[index]
+                hand_detail_scroll = 0
+            pending_card_press = None
+
+        if pending_synthesis_card_press and now - pending_synthesis_card_press["start"] >= LONG_PRESS_MS:
+            index = pending_synthesis_card_press["index"]
+            if 0 <= index < len(game.current_player.hand):
+                hand_detail_card = game.current_player.hand[index]
+                hand_detail_scroll = 0
+            pending_synthesis_card_press = None
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+
+            if event.type == pygame.MOUSEMOTION:
+                if touch_scroll:
+                    dy = event.pos[1] - touch_scroll["last_y"]
+                    touch_scroll["last_y"] = event.pos[1]
+                    if touch_scroll["target"] == "hand_detail":
+                        hand_detail_scroll = max(0, hand_detail_scroll - dy)
+                    elif touch_scroll["target"] == "catalog_detail":
+                        catalog_detail_scroll = max(0, catalog_detail_scroll - dy)
+                    elif touch_scroll["target"] == "help":
+                        help_scroll = max(0, help_scroll - dy)
+                    continue
+                for pending_name in ("pending_card_press", "pending_synthesis_card_press"):
+                    pending = pending_card_press if pending_name == "pending_card_press" else pending_synthesis_card_press
+                    if pending:
+                        dx = event.pos[0] - pending["pos"][0]
+                        dy = event.pos[1] - pending["pos"][1]
+                        if dx * dx + dy * dy > 18 * 18:
+                            if pending_name == "pending_card_press":
+                                pending_card_press = None
+                            else:
+                                pending_synthesis_card_press = None
 
             if event.type == pygame.MOUSEWHEEL and hand_detail_card:
                 hand_detail_scroll = max(0, hand_detail_scroll - event.y * 48)
@@ -1160,9 +1235,12 @@ async def main():
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and hand_detail_card:
                 detail_rect = card_detail_modal_rect(width, height)
-                if not detail_rect.collidepoint(pygame.mouse.get_pos()):
+                mouse_pos = pygame.mouse.get_pos()
+                if not detail_rect.collidepoint(mouse_pos):
                     hand_detail_card = None
                     hand_detail_scroll = 0
+                else:
+                    touch_scroll = {"target": "hand_detail", "last_y": mouse_pos[1]}
                 continue
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and active_modal:
@@ -1172,6 +1250,8 @@ async def main():
                     if not detail_rect.collidepoint(mouse_pos):
                         catalog_selected_card = None
                         catalog_detail_scroll = 0
+                    else:
+                        touch_scroll = {"target": "catalog_detail", "last_y": mouse_pos[1]}
                     continue
 
                 close_rect = pygame.Rect(active_modal_rect.right - 54, active_modal_rect.y + 10, 36, 32)
@@ -1196,6 +1276,9 @@ async def main():
                                 catalog_selected_card = card
                                 catalog_detail_scroll = 0
                                 break
+                    continue
+                if active_modal == "help" and active_modal_rect.collidepoint(mouse_pos):
+                    touch_scroll = {"target": "help", "last_y": mouse_pos[1]}
                     continue
                 continue
 
@@ -1267,9 +1350,24 @@ async def main():
 
             if event.type == pygame.MOUSEBUTTONDOWN and game.waiting_for_player:
                 mouse_pos = pygame.mouse.get_pos()
+                if event.button == 1 and not game.synthesis_mode:
+                    if action_button_rects["play"].collidepoint(mouse_pos):
+                        game.resolve_reaction()
+                        pending_card_press = None
+                        continue
+                    if action_button_rects["discard"].collidepoint(mouse_pos):
+                        game.discard_selected_card()
+                        pending_card_press = None
+                        continue
+                    if action_button_rects["draw"].collidepoint(mouse_pos):
+                        game.draw_from_deck_and_pass()
+                        pending_card_press = None
+                        continue
+
                 if event.button == 1 and game.synthesis_mode:
                     if synthesis_cancel_rect(active_synthesis_panel_rect).collidepoint(mouse_pos):
                         game.cancel_synthesis()
+                        pending_synthesis_card_press = None
                         continue
                     if synthesis_confirm_rect(active_synthesis_panel_rect).collidepoint(mouse_pos):
                         if game.synthesis_target:
@@ -1290,7 +1388,7 @@ async def main():
                         continue
                     for i, sprite in enumerate(sprites):
                         if sprite.is_clicked(mouse_pos):
-                            game.select_synthesis_card(i)
+                            pending_synthesis_card_press = {"index": i, "start": pygame.time.get_ticks(), "pos": mouse_pos}
                             break
                     continue
 
@@ -1313,8 +1411,30 @@ async def main():
                     for i, sprite in enumerate(sprites):
                         if sprite.is_clicked(mouse_pos):
                             if event.button == 1:
-                                game.select_card(i)
+                                pending_card_press = {"index": i, "start": pygame.time.get_ticks(), "pos": mouse_pos}
                             break
+
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                if touch_scroll:
+                    touch_scroll = None
+                    continue
+                mouse_pos = pygame.mouse.get_pos()
+                if pending_synthesis_card_press:
+                    press = pending_synthesis_card_press
+                    pending_synthesis_card_press = None
+                    if game.synthesis_mode and pygame.time.get_ticks() - press["start"] < LONG_PRESS_MS:
+                        index = press["index"]
+                        if 0 <= index < len(sprites) and sprites[index].is_clicked(mouse_pos):
+                            game.select_synthesis_card(index)
+                    continue
+                if pending_card_press:
+                    press = pending_card_press
+                    pending_card_press = None
+                    if game.waiting_for_player and not game.synthesis_mode and pygame.time.get_ticks() - press["start"] < LONG_PRESS_MS:
+                        index = press["index"]
+                        if 0 <= index < len(sprites) and sprites[index].is_clicked(mouse_pos):
+                            game.select_card(index)
+                    continue
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
@@ -1353,7 +1473,7 @@ async def main():
                         hand_detail_card = game.reaction_table[-1]
                         hand_detail_scroll = 0
                     else:
-                        game.add_log("請先選擇 1 張手牌，再按 X 查看說明")
+                        game.add_log("長按手牌可查看卡牌說明")
                 elif event.key == pygame.K_p and game.waiting_for_player:
                     game.preview_reaction()
 
@@ -1386,16 +1506,7 @@ async def main():
             max_atp=game.win_atp,
         )
 
-        draw_panel(
-            screen,
-            hud_rect,
-            "操作提示",
-            font,
-            [
-                "Enter出牌｜Shift丟棄｜X說明｜空白抽牌",
-            ],
-            accent=BLUE,
-        )
+        draw_action_panel(screen, hud_rect, font, game)
 
         lab_rect = pygame.Rect(center_x, height * 0.08, center_w, height * 0.21)
         draw_shadowed_panel(screen, lab_rect)
@@ -1547,7 +1658,7 @@ async def main():
             )
             draw_wrapped_text_in_rect(
                 screen,
-                "按 Esc 離開",
+                "可點再來一局開始新遊戲",
                 pygame.Rect(result_rect.x + 24, restart_button_rect.bottom + 18, result_rect.width - 48, 34),
                 font,
                 MUTED,

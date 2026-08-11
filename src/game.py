@@ -307,7 +307,7 @@ class Game:
 
         if self.current_player_hand_full():
             self.waiting_to_discard_for_offer = True
-            self.add_log("手牌已滿：選 1 張按 Shift 丟棄後拿取棄牌")
+            self.add_log("手牌已滿：選 1 張點丟棄後拿取棄牌")
             return False
 
         card = self.discard_offer_card
@@ -341,7 +341,7 @@ class Game:
             return False
 
         if self.waiting_to_discard_for_offer:
-            self.add_log("請先選 1 張按 Shift 丟棄後拿取棄牌")
+            self.add_log("請先選 1 張點丟棄後拿取棄牌")
             return False
 
         self.decline_discard_offer()
@@ -357,7 +357,7 @@ class Game:
             return True
 
         if self.current_player_hand_full():
-            self.add_log("手牌已滿：選 1 張牌按 Shift 丟棄")
+            self.add_log("手牌已滿：選 1 張牌點丟棄")
             return False
 
         if self.difficulty == "簡單" and self.can_current_player_form_reaction():
@@ -597,7 +597,7 @@ class Game:
 
         if card.type == "structure":
             if self.has_structure(self.current_player, card.en_name):
-                self.add_log(f"已擁有{card_name(card)}，請按 Shift 丟棄")
+                self.add_log(f"已擁有{card_name(card)}，請點丟棄")
                 return False
 
             reject_reason = self.structure_reject_reason(self.current_player, card)
@@ -744,7 +744,7 @@ class Game:
         elif self.can_single_play_card(self.selected_single_card()):
             selected_card = self.selected_single_card()
             if selected_card.type == "structure" and self.has_structure(self.current_player, selected_card.en_name):
-                self.add_log(f"重複結構：按 Shift 丟棄{card_name(selected_card)}")
+                self.add_log(f"重複結構：點丟棄{card_name(selected_card)}")
             else:
                 reject_reason = None
                 if selected_card.type == "structure":
@@ -758,7 +758,7 @@ class Game:
         if self.game_over or not self.reaction_table:
             return False
         if self.waiting_to_discard_for_offer:
-            self.add_log("請按 Shift 丟棄選取卡牌")
+            self.add_log("請點丟棄移除選取卡牌")
             return False
         if self.waiting_for_deck_draw_after_discard:
             self.add_log("請先點擊牌堆補抽 1 張")
@@ -775,7 +775,7 @@ class Game:
             if self.can_single_play_card(selected_card):
                 return self.play_single_card(selected_card)
             if self.current_player_hand_full() and selected_card:
-                self.add_log("手牌已滿，請按 Shift 丟棄選取卡牌")
+                self.add_log("手牌已滿，請點丟棄選取卡牌")
                 return False
             self.add_log("無法執行反應")
             return False
