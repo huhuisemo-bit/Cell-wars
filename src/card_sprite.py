@@ -4,7 +4,7 @@ from text_fit import draw_text_in_rect
 from ui_text import card_type_label
 
 CARD_WIDTH = 140
-CARD_HEIGHT = 200
+CARD_HEIGHT = 180
 
 TYPE_COLORS = {
     "resource": (138, 184, 92),

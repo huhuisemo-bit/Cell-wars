@@ -15,7 +15,7 @@ from text_fit import draw_text_in_rect, draw_wrapped_text_in_rect, text_tokens, 
 from ui_text import card_list, card_name, card_type_label, race_name, reaction_formula, reaction_name
 
 SCREEN_SIZE = (1200, 800)
-MIN_PAGE_FONT_SIZE = 26
+MIN_PAGE_FONT_SIZE = 22
 BG = (246, 250, 255)
 PANEL = (255, 255, 252)
 PANEL_TINT = (242, 248, 255)
@@ -271,24 +271,36 @@ def draw_panel(screen, rect, title, font, body_lines, accent=BLUE):
     header_rect = pygame.Rect(rect.x, rect.y, rect.width, 42)
     pygame.draw.rect(screen, PANEL_TINT, header_rect, border_top_left_radius=8, border_top_right_radius=8)
     pygame.draw.line(screen, LINE, (rect.x, rect.y + 42), (rect.right, rect.y + 42), 1)
-    draw_wrapped_text_in_rect(
+    draw_text_in_rect(
         screen,
         title,
-        pygame.Rect(rect.x + 16, rect.y + 12, rect.width - 32, 30),
+        pygame.Rect(rect.x + 16, rect.y + 7, rect.width - 32, 34),
         font,
         accent,
         max_lines=1,
     )
+    body_rect = pygame.Rect(rect.x + 16, rect.y + 56, rect.width - 32, rect.height - 68)
     line_height = font.get_linesize()
-    for i, line in enumerate(body_lines):
-        draw_wrapped_text_in_rect(
-            screen,
-            line,
-            pygame.Rect(rect.x + 16, rect.y + 56 + i * (line_height + 2), rect.width - 32, line_height),
-            font,
-            MUTED,
-            max_lines=2,
-        )
+    y = body_rect.y
+    previous_clip = screen.get_clip()
+    screen.set_clip(body_rect)
+    for line in body_lines:
+        wrapped = wrap_text(line, font, body_rect.width)
+        for wrapped_line in wrapped:
+            if y + line_height > body_rect.bottom:
+                screen.set_clip(previous_clip)
+                return
+            draw_wrapped_text_in_rect(
+                screen,
+                wrapped_line,
+                pygame.Rect(body_rect.x, y, body_rect.width, line_height),
+                font,
+                MUTED,
+                max_lines=1,
+            )
+            y += line_height + 2
+        y += 4
+    screen.set_clip(previous_clip)
 
 
 def build_header_menu_rect(width):
@@ -299,11 +311,11 @@ def draw_header(screen, width, font, game):
     pygame.draw.line(screen, LINE, (18, 58), (width - 18, 58), 1)
     tab = pygame.Rect(18, 18, 110, 36)
     pygame.draw.rect(screen, BLUE, tab, border_radius=9)
-    draw_wrapped_text_in_rect(screen, f"回合 {game.turn}", tab.inflate(-18, -8), font, (255, 255, 255), max_lines=1, align="center", v_align="center")
-    draw_wrapped_text_in_rect(screen, f"{game.current_player.name} 的回合", pygame.Rect(150, 18, 260, 36), font, BLUE, max_lines=1, v_align="center")
+    draw_text_in_rect(screen, f"回合 {game.turn}", tab.inflate(-14, -4), font, (255, 255, 255), max_lines=1, align="center", v_align="center")
+    draw_text_in_rect(screen, f"{game.current_player.name} 的回合", pygame.Rect(150, 18, 280, 36), font, BLUE, max_lines=1, v_align="center")
     menu_rect = build_header_menu_rect(width)
     draw_flask_icon(screen, (menu_rect.x + 20, menu_rect.centery + 2), BLUE, 0.55)
-    draw_wrapped_text_in_rect(screen, "Cell Wars", pygame.Rect(menu_rect.x + 38, menu_rect.y + 4, menu_rect.width - 38, 34), font, BLUE, max_lines=1, align="right", v_align="center")
+    draw_text_in_rect(screen, "Cell Wars", pygame.Rect(menu_rect.x + 38, menu_rect.y + 4, menu_rect.width - 38, 34), font, BLUE, max_lines=1, align="right", v_align="center")
 
 
 def draw_atp_bar(screen, rect, value, maximum, color):
@@ -331,7 +343,7 @@ def player_detail_lines(player, lab_text=None):
 
 def player_panel_height(player, font, width, expanded=False, lab_text=None):
     if not expanded:
-        return 188 if lab_text is None else 218
+        return 198 if lab_text is None else 232
 
     content_width = max(80, width - 104)
     line_count = 0
@@ -351,13 +363,13 @@ def draw_player_panel(screen, rect, player, font, active=False, accent=BLUE, exp
         draw_leaf_icon(screen, avatar.center, accent, 0.9)
     else:
         draw_dot_icon(screen, avatar.center, accent, 0.85)
-    draw_wrapped_text_in_rect(screen, player.name, pygame.Rect(rect.x + 88, rect.y + 18, rect.width - 104, 34), font, accent, max_lines=1)
-    draw_wrapped_text_in_rect(screen, f"種族：{race_name(player.race)}", pygame.Rect(rect.x + 88, rect.y + 56, rect.width - 104, 28), font, MUTED, max_lines=1)
-    draw_wrapped_text_in_rect(screen, "ATP", pygame.Rect(rect.x + 88, rect.y + 92, 54, 28), font, TEXT, max_lines=1)
-    draw_atp_bar(screen, pygame.Rect(rect.x + 140, rect.y + 100, max(40, rect.width - 230), 12), player.atp, max_atp, accent)
-    draw_wrapped_text_in_rect(screen, f"{player.atp} / {max_atp}", pygame.Rect(rect.right - 92, rect.y + 88, 78, 30), font, TEXT, max_lines=1, align="right")
+    draw_text_in_rect(screen, player.name, pygame.Rect(rect.x + 88, rect.y + 14, rect.width - 104, 34), font, accent, max_lines=1)
+    draw_text_in_rect(screen, f"種族：{race_name(player.race)}", pygame.Rect(rect.x + 88, rect.y + 48, rect.width - 104, 34), font, MUTED, max_lines=1)
+    draw_text_in_rect(screen, "ATP", pygame.Rect(rect.x + 88, rect.y + 84, 48, 32), font, TEXT, max_lines=1)
+    draw_atp_bar(screen, pygame.Rect(rect.x + 140, rect.y + 94, max(40, rect.width - 230), 12), player.atp, max_atp, accent)
+    draw_text_in_rect(screen, f"{player.atp} / {max_atp}", pygame.Rect(rect.right - 92, rect.y + 82, 78, 34), font, TEXT, max_lines=1, align="right")
 
-    detail_rect = pygame.Rect(rect.x + 88, rect.y + 126, rect.width - 104, rect.height - 132)
+    detail_rect = pygame.Rect(rect.x + 88, rect.y + 120, rect.width - 104, rect.height - 126)
     if expanded:
         y = detail_rect.y
         for line in player_detail_lines(player, lab_text):
@@ -405,10 +417,10 @@ def draw_battle_log(screen, rect, font, messages):
     draw_shadowed_panel(screen, rect)
     pygame.draw.rect(screen, PANEL_TINT, pygame.Rect(rect.x, rect.y, rect.width, 42), border_top_left_radius=8, border_top_right_radius=8)
     pygame.draw.line(screen, LINE, (rect.x, rect.y + 42), (rect.right, rect.y + 42), 1)
-    draw_wrapped_text_in_rect(
+    draw_text_in_rect(
         screen,
         "戰鬥紀錄",
-        pygame.Rect(rect.x + 18, rect.y + 10, rect.width - 36, 30),
+        pygame.Rect(rect.x + 18, rect.y + 7, rect.width - 36, 34),
         font,
         BLUE,
         max_lines=1,
@@ -444,8 +456,14 @@ def draw_battle_log(screen, rect, font, messages):
         for line in lines:
             if y + line_height > body_rect.bottom:
                 return
-            surface = font.render(line, True, MUTED)
-            screen.blit(surface, (body_rect.x + 24, y))
+            draw_wrapped_text_in_rect(
+                screen,
+                line,
+                pygame.Rect(body_rect.x + 24, y, body_rect.width - 24, line_height),
+                font,
+                MUTED,
+                max_lines=1,
+            )
             y += line_height
         y += entry_gap
 
@@ -480,7 +498,7 @@ def draw_settings_panel(screen, rect, font, game):
     draw_shadowed_panel(screen, rect, fill=(255, 255, 252), border=LINE)
     pygame.draw.rect(screen, PANEL_TINT, pygame.Rect(rect.x, rect.y, rect.width, 42), border_top_left_radius=8, border_top_right_radius=8)
     pygame.draw.line(screen, LINE, (rect.x, rect.y + 42), (rect.right, rect.y + 42), 1)
-    draw_wrapped_text_in_rect(screen, "設定與說明", pygame.Rect(rect.x + 18, rect.y + 10, rect.width - 36, 30), font, BLUE, max_lines=1)
+    draw_text_in_rect(screen, "設定與說明", pygame.Rect(rect.x + 18, rect.y + 7, rect.width - 36, 34), font, BLUE, max_lines=1)
 
     button_rects = {}
     y = rect.y + 62
@@ -541,7 +559,7 @@ def draw_modal_frame(screen, rect, font, title, accent=BLUE):
     draw_shadowed_panel(screen, rect, fill=(255, 255, 252), border=LINE)
     pygame.draw.rect(screen, PANEL_TINT, pygame.Rect(rect.x, rect.y, rect.width, 50), border_top_left_radius=8, border_top_right_radius=8)
     pygame.draw.line(screen, LINE, (rect.x, rect.y + 50), (rect.right, rect.y + 50), 1)
-    draw_wrapped_text_in_rect(screen, title, pygame.Rect(rect.x + 24, rect.y + 12, rect.width - 96, 34), font, accent, max_lines=1)
+    draw_text_in_rect(screen, title, pygame.Rect(rect.x + 24, rect.y + 8, rect.width - 96, 38), font, accent, max_lines=1)
     close_rect = pygame.Rect(rect.right - 54, rect.y + 10, 36, 32)
     pygame.draw.rect(screen, (255, 255, 252), close_rect, border_radius=8)
     pygame.draw.rect(screen, LINE, close_rect, 2, border_radius=8)
@@ -771,7 +789,7 @@ def draw_catalog_card(screen, rect, card, font, selected=False):
     accent = {"action": WARN, "resource": GREEN, "structure": GOLD}.get(card.type, BLUE)
     pygame.draw.rect(screen, (255, 255, 248), rect, border_radius=7)
     pygame.draw.rect(screen, accent if selected else (205, 217, 231), rect, 3 if selected else 1, border_radius=7)
-    draw_wrapped_text_in_rect(screen, card.zh_name, pygame.Rect(rect.x + 12, rect.y + 12, rect.width - 24, 34), font, TEXT, max_lines=1)
+    draw_text_in_rect(screen, card.zh_name, pygame.Rect(rect.x + 12, rect.y + 12, rect.width - 24, 34), font, TEXT, max_lines=1)
     draw_text_in_rect(screen, card.en_name, pygame.Rect(rect.x + 12, rect.y + 50, rect.width - 24, 54), font, MUTED, max_lines=2)
     draw_flask_icon(screen, (rect.centerx, rect.y + rect.height * 0.64), (185, 194, 183), 0.50)
     draw_wrapped_text_in_rect(screen, card_type_label(card), pygame.Rect(rect.x + 12, rect.bottom - 42, rect.width - 24, 30), font, TEXT, max_lines=1, align="center")
@@ -783,7 +801,7 @@ def draw_catalog_modal(screen, rect, font, tab, selected_card, game):
     for tab_id, label, color, tab_rect in catalog_tab_rects(rect):
         pygame.draw.rect(screen, color if tab == tab_id else (255, 255, 252), tab_rect, border_top_left_radius=8, border_top_right_radius=8)
         pygame.draw.rect(screen, color, tab_rect, 2, border_top_left_radius=8, border_top_right_radius=8)
-        draw_wrapped_text_in_rect(screen, label, tab_rect.inflate(-12, -8), font, (255, 255, 255) if tab == tab_id else color, max_lines=1, align="center", v_align="center")
+        draw_text_in_rect(screen, label, tab_rect.inflate(-12, -6), font, (255, 255, 255) if tab == tab_id else color, max_lines=1, align="center", v_align="center")
         tab_rects.append((tab_id, tab_rect))
 
     book_rect = pygame.Rect(rect.x + 26, rect.y + 72, rect.width - 52, rect.height - 104)
@@ -813,10 +831,10 @@ def draw_card_detail_modal(screen, rect, font, card, game, scroll=0):
     pygame.draw.rect(screen, PANEL_TINT, pygame.Rect(rect.x, rect.y, rect.width, 54), border_top_left_radius=8, border_top_right_radius=8)
     pygame.draw.line(screen, LINE, (rect.x, rect.y + 54), (rect.right, rect.y + 54), 1)
     accent = {"action": WARN, "resource": GREEN, "structure": GOLD, "defense": BLUE, "environment": MUTED}.get(card.type, BLUE)
-    draw_wrapped_text_in_rect(
+    draw_text_in_rect(
         screen,
         f"{card.zh_name}（{card.en_name}）",
-        pygame.Rect(rect.x + 24, rect.y + 12, rect.width - 48, 34),
+        pygame.Rect(rect.x + 24, rect.y + 8, rect.width - 48, 38),
         font,
         accent,
         max_lines=1,
@@ -915,11 +933,16 @@ def reaction_preview_lines(game):
     ]
 
 
-def build_sprites(game, width, height):
+def build_sprites(game, width, height, hand_rect=None):
     sprites = []
-    start_x = width * 0.18
-    y = height * 0.75
-    hand_right = width * 0.69
+    if hand_rect is None:
+        start_x = width * 0.18
+        y = height * 0.75
+        hand_right = width * 0.69
+    else:
+        start_x = hand_rect.x + 210
+        y = hand_rect.y + 46
+        hand_right = hand_rect.right - 20
     available_width = max(0, hand_right - start_x - CARD_WIDTH - 16)
     gap = min(170, max(58, available_width / max(1, len(game.current_player.hand) - 1)))
 
@@ -1105,10 +1128,10 @@ async def main():
         player_h = player_panel_height(game.player, font, left_w, expanded_panels["player"], lab_text)
         opponent_rect = pygame.Rect(left_x, height * 0.08, left_w, opponent_h)
         player_rect = pygame.Rect(left_x, opponent_rect.bottom + 12, left_w, player_h)
-        hand_y = height * 0.745
-        hud_rect = pygame.Rect(center_x, height * 0.59, center_w, height * 0.14)
+        hand_y = height * 0.71
+        hud_rect = pygame.Rect(center_x, height * 0.565, center_w, height * 0.13)
         hand_rect = pygame.Rect(left_x, hand_y, center_x + center_w - left_x, height - hand_y - 8)
-        sprites = build_sprites(game, width, height)
+        sprites = build_sprites(game, width, height, hand_rect)
         deck_rect = build_deck_rect(width, height)
         discard_rect = build_discard_rect(width, height)
         synthesis_button_rect = build_synthesis_button_rect(deck_rect, height)
@@ -1369,24 +1392,23 @@ async def main():
             "操作提示",
             font,
             [
-                f"第 {game.turn} 回合 - {game.current_player.name}",
-                "Enter出牌，Shift丟棄，X說明",
+                "Enter出牌｜Shift丟棄｜X說明｜空白抽牌",
             ],
             accent=BLUE,
         )
 
-        lab_rect = pygame.Rect(center_x, height * 0.08, center_w, height * 0.22)
+        lab_rect = pygame.Rect(center_x, height * 0.08, center_w, height * 0.21)
         draw_shadowed_panel(screen, lab_rect)
         pygame.draw.rect(screen, PANEL_TINT, pygame.Rect(lab_rect.x, lab_rect.y, lab_rect.width, 42), border_top_left_radius=8, border_top_right_radius=8)
         pygame.draw.line(screen, LINE, (lab_rect.x, lab_rect.y + 42), (lab_rect.right, lab_rect.y + 42), 1)
-        draw_wrapped_text_in_rect(screen, "實驗室（Laboratory）", pygame.Rect(lab_rect.x + 18, lab_rect.y + 10, lab_rect.width - 36, 30), font, GREEN, max_lines=1)
+        draw_text_in_rect(screen, "實驗室（Laboratory）", pygame.Rect(lab_rect.x + 18, lab_rect.y + 7, lab_rect.width - 36, 34), font, GREEN, max_lines=1)
         slot_rect = pygame.Rect(lab_rect.x + 18, lab_rect.y + 60, lab_rect.width - 36, lab_rect.height - 80)
         pygame.draw.rect(screen, (255, 255, 255), slot_rect, border_radius=8)
         pygame.draw.rect(screen, (170, 187, 206), slot_rect, 2, border_radius=8)
         table = card_list(game.reaction_table, "將卡牌加入實驗室\n可形成反應")
         draw_wrapped_text_in_rect(screen, table, slot_rect.inflate(-28, -22), font, MUTED, max_lines=3, align="center", v_align="center")
 
-        preview_rect = pygame.Rect(center_x, height * 0.32, center_w, height * 0.26)
+        preview_rect = pygame.Rect(center_x, height * 0.315, center_w, height * 0.25)
         draw_panel(screen, preview_rect, "反應預覽", font, reaction_preview_lines(game), accent=GREEN)
 
         log_rect = pygame.Rect(right_x, height * 0.08, right_w, height * 0.48)
@@ -1416,10 +1438,10 @@ async def main():
         pygame.draw.line(screen, LINE, (deck_rect.x, deck_rect.y + 42), (deck_rect.right, deck_rect.y + 42), 1)
         deck_border = ACCENT if game.waiting_for_deck_draw_after_discard or game.current_player_hand_full() else MUTED if game.can_current_player_form_reaction() else ACCENT
         pygame.draw.rect(screen, deck_border, deck_rect, 2, border_radius=8)
-        draw_wrapped_text_in_rect(
+        draw_text_in_rect(
             screen,
             "牌堆",
-            pygame.Rect(deck_rect.x + 16, deck_rect.y + 12, deck_rect.width - 32, 28),
+            pygame.Rect(deck_rect.x + 16, deck_rect.y + 7, deck_rect.width - 32, 34),
             font,
             BLUE,
             max_lines=1,
@@ -1452,10 +1474,10 @@ async def main():
         )
 
         draw_shadowed_panel(screen, hand_rect, fill=(252, 255, 252), border=LINE)
-        draw_wrapped_text_in_rect(
+        draw_text_in_rect(
             screen,
             "手牌",
-            pygame.Rect(hand_rect.x + 18, hand_rect.y + 12, 180, 30),
+            pygame.Rect(hand_rect.x + 18, hand_rect.y + 8, 180, 34),
             font,
             BLUE,
             max_lines=1,
